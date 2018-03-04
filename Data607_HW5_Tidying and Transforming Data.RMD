@@ -1,0 +1,151 @@
+---
+title: "Data607 HW5 Assignment - Tidying and Transforming Data"
+author: "Ritesh Lohiya"
+date: "March 3, 2018"
+output: html_document
+---
+
+The chart above describes arrival delays for two airlines across five destinations. Your task is to:
+
+(1) Create a .CSV file (or optionally, a MySQL database!) that includes all of the information above. You're encouraged to use a "wide" structure similar to how the information appears above, so that you can practice tidying and transformations as described below.
+
+(2) Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data.
+
+(3) Perform analysis to compare the arrival delays for the two airlines.
+
+(4) Your code should be in an R Markdown file, posted to rpubs.com, and should include narrative descriptions of your data cleanup work, analysis, and conclusions.
+
+Please include in your homework submission:
+??? The URL to the .Rmd file in your GitHub repository. and
+??? The URL for your rpubs.com web page.
+
+```{r}
+library(knitr)
+library(stringr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+```
+
+Reading the csv file:
+
+```{r}
+airlines <- read.csv("https://raw.githubusercontent.com/Riteshlohiya/Data607_Week5_Assignment_Tidying_Transforming_Data/master/Numbersense.csv", header=FALSE, sep=",", stringsAsFactors=FALSE)
+airlines
+```
+
+Data cleaning:
+
+Renaming the columns:
+
+```{r}
+airlines$V1[1] <- "airline"
+airlines$V2[1] <- "status"
+airlines
+```
+
+Making the row #1 as column name:
+
+```{r}
+names(airlines) <- airlines[1,]
+airlines
+```
+
+Delete row #1 and 4:
+
+```{r}
+airlines <- airlines[-c(1,4), ]
+airlines
+```
+
+Addind Airline names to the missing records:
+
+```{r}
+airlines$airline[2] = 'ALASKA'
+airlines$airline[4] = 'AM WEST'
+```
+
+Transforming the table by using gather():
+
+Gather: takes multiple columns and collapses into key-value pairs, duplicating all other columns as needed. You use gather() when you notice that you have columns that are not variables.
+
+```{r}
+airlines <-gather(airlines, city, number, 3:7, factor_key=TRUE)
+airlines
+```
+
+Using spread() function to separate the data on Status:
+
+Spread: Spread a key-value pair across multiple columns.
+
+```{r}
+airlines <-  airlines %>%
+                 spread(status, `number`)
+airlines
+```
+
+
+```{r}
+for (i in 3:dim(airlines)[2]){
+  airlines[,i] <- as.integer(airlines[,i])
+}
+airlines
+```
+
+Using mutate for adding new columns like total flights, % on time and % delays:
+
+Mutate: Mutate adds new variables and preserves existing
+
+```{r}
+airlines <- airlines %>% 
+  mutate(total = delayed + `on time`) 
+airlines
+```
+
+```{r}
+airlines <- airlines %>% 
+  mutate(on_time_percentage = (`on time`/total)*100,
+       delayed_percentage = (delayed/total)*100) %>%
+  arrange(city)
+airlines
+
+```
+
+Using ggplot to understand more:
+
+```{r}
+ggplot(airlines, aes(x = airline, y=delayed_percentage, fill = city)) +  
+          geom_bar(stat="identity",position="dodge") + 
+          xlab("Airlines") + ylab("Delays") 
+```
+
+To calculate the average:
+
+```{r}
+airlines_summary = airlines %>% group_by(airline) %>% summarise(total_delayed = sum(delayed), total_ontime = sum(`total`), avg_delay = total_delayed/total_ontime*100)
+airlines_summary
+```
+
+Calculate the city totals:
+
+```{r}
+airlines %>%
+  group_by(city) %>%
+  summarize(count = n(), sum_city = sum(total))
+```
+
+Boxplot to check the outlier:
+
+```{r}
+ggplot(airlines, aes(airline, total)) + geom_boxplot()
+```
+
+
+ 
+
+
+
+
+
+
+
